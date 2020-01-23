@@ -1,0 +1,347 @@
+---
+title: "Web & Social Media Assignment"
+author: "Group 7 - BABI Bangalore - Section B"
+date: "17 June 2018"
+output: word_document
+---
+
+For the assignment we have have identified brand as 'World Environment Day', which is celebrated on June 5 every year. This year UN ran a campaign on reduction of plastic waste, the campaign was advertised as #BeatPlasticPollution campaign on twitter. 
+
+In this assignment, we aim at understanding the sentiments of the people from around the world, on saving the planet  and try understand the top trending topics when it comes to saving planet
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+#Step 1: Load Packages
+library(bit64)
+library(twitteR)
+library(ROAuth)
+library(SnowballC)
+library(tm)
+library(ggplot2)
+library(RColorBrewer)
+library(wordcloud)
+library(topicmodels)
+library(data.table)
+library(stringi)
+library(syuzhet)
+library(dplyr)
+library(plyr)
+library(grid)
+library(gridExtra)
+```
+
+
+```{r}
+#Step 2: Set the working directory
+setwd("F:/BABI/Group Assignments/Web and Social media Analytics")
+getwd()
+
+#Step 3: Download Tweets from Twitter 
+
+
+```
+
+```{r}
+#Step 4: Load the csv file
+tweets.df <- read.csv("tweetsWorldEnvironmentDay.csv") 
+
+#Step 5: Convert date to correct date format
+tweets.df$created <- as.Date(tweets.df$created, format= "%d-%m-%Y")
+tweets.df$text <- as.character(tweets.df$text)
+str(tweets.df)
+
+```
+
+
+
+```{r}
+#Step 6: Data Cleaning
+#Clean the text data by removing links, tags and delimiters.
+#Build a Corpus, and specify the location to be the character Vectors
+
+  #Creating document corpus with tweet text
+  myCorpus<- Corpus(VectorSource(tweets.df$text)) 
+
+  #Converting text to Lower Case
+  myCorpus <- tm_map(myCorpus, content_transformer(stri_trans_tolower))
+  writeLines(strwrap(myCorpus[[750]]$content,60))
+
+  #Removing the links (URLs)
+  removeURL <- function(x) gsub("http[^[:space:]]*", "", x)  
+  myCorpus <- tm_map(myCorpus, content_transformer(removeURL))
+  writeLines(strwrap(myCorpus[[750]]$content,60))
+
+  #Removing the Usernames
+  removeUsername <- function(x) gsub("@[^[:space:]]*", "", x)  
+  myCorpus <- tm_map(myCorpus, content_transformer(removeUsername))
+  writeLines(strwrap(myCorpus[[750]]$content,60))
+  
+  #Removing anything except the english language and space
+  removeNumPunct <- function(x) gsub("[^[:alpha:][:space:]]*", "", x)   
+  myCorpus <- tm_map(myCorpus, content_transformer(removeNumPunct))
+  writeLines(strwrap(myCorpus[[750]]$content,60))
+  
+  #Removing anything except the english language and space
+  removeNumPunct <- function(x) gsub("[^[:alpha:][:space:]]*", "", x)   
+  myCorpus <- tm_map(myCorpus, content_transformer(removeNumPunct))
+  writeLines(strwrap(myCorpus[[750]]$content,60))
+  
+  #Removing Stopwords
+  myStopWords<- c((stopwords('english')),c("rt", "uu", "uuu", "uuuu", "us", "de", "dÃ", "worldenvironmentday", "environment", "uub", "uue", "amp", "la", "india", "dÃ", "day", "years", "year", "uauuuduucuduuudueuucuu","uufuf", "ufu", "uuc", "th", "pm", "en", "ueuu", "uuf", "ufuuaefufuub", "uauuuc", "uuuuu", "uuauu", "uau", "ucuuu", "s", "el", "fufuuaefufuub", "un", "uauudufueuuu", "fufucuf", "uudu", "uueuu"))
+  myCorpus<- tm_map(myCorpus,removeWords , myStopWords) 
+  writeLines(strwrap(myCorpus[[750]]$content,60))
+
+  #Removing Single letter words
+  removeSingle <- function(x) gsub(" . ", " ", x)   
+  myCorpus <- tm_map(myCorpus, content_transformer(removeSingle))
+  writeLines(strwrap(myCorpus[[750]]$content,60))
+  
+  #Remove Extra Whitespaces
+  myCorpus<- tm_map(myCorpus, stripWhitespace)
+  writeLines(strwrap(myCorpus[[750]]$content,60))
+  
+```
+
+```{r}
+#Step 7: Let us keep a copy of "myCorpus" for stem completion later
+myCorpusCopy<- myCorpus
+#myCorpus <- myCorpusCopy
+
+```
+
+```{r}
+
+#Stem words in the corpus
+#myCorpus<-tm_map(myCorpus, stemDocument)
+#writeLines(strwrap(myCorpus[[250]]$content,60))
+
+#Function to correct/complete the text after stemming
+#stemCompletion2 <- function(x,dictionary) {
+#  x <- unlist(strsplit(as.character(x)," "))
+#  x <- x[x !=""]
+#  x <- stemCompletion(x, dictionary = dictionary)
+#  x <- paste(x, sep="", collapse=" ")
+#  PlainTextDocument(stripWhitespace(x))#}
+
+#Stem Complete and Display the same tweet above with the completed and corrected text.
+#myCorpus <- lapply(myCorpus, stemCompletion2, dictionary=myCorpusCopy)
+#myCorpus <- Corpus(VectorSource(myCorpus))
+#writeLines(strwrap(myCorpus[[250]]$content, 60))
+
+#Correcting mis-splet words
+#wordFreq <- function(corpus,word)
+#{results<- lapply(corpus,function(x){ grep(as.character(x),pattern = paste0("\\<", #word))})sum(unlist(results))}
+
+#n.plastic <- wordFreq(myCorpus, "plastic")
+#n.plastics <- wordFreq(myCorpus, "plastics")
+#cat(n.plstic, n.plstics)
+
+#Replace words with the proper ones
+replaceWord <- function(corpus, plastics, plastic)
+{
+tm_map(corpus, content_transformer(gsub), pattern=plastics, replacement=plastic)
+  }
+myCorpus<- replaceWord(myCorpus, "plastics", "plastic")
+
+
+
+```
+
+```{r}
+#Step 8: Creating a term document matrix
+#myCorpus <- Corpus(VectorSource(myCorpus))
+tdm<- TermDocumentMatrix(myCorpus, control= list(wordLengths= c(1, Inf)))
+tdm
+
+```
+
+```{r}
+#Step 9: Find the terms used most frequently
+(freq.terms <- findFreqTerms(tdm, lowfreq = 25))
+
+term.freq <- rowSums(as.matrix(tdm))
+term.freq <- subset(term.freq, term.freq > 25)
+df <- data.frame(term = names(term.freq), freq= term.freq)
+
+```
+
+
+```{r}
+#Step 10: Frequency Analysis
+(freq.terms <- findFreqTerms(tdm, lowfreq = 10))
+
+term.freq <- rowSums(as.matrix(tdm))
+term.freq <- subset(term.freq, term.freq > 10)
+df1 <- data.frame(term = names(term.freq), freq= term.freq)
+
+(freq.terms <- findFreqTerms(tdm, lowfreq = 40))
+
+term.freq <- rowSums(as.matrix(tdm))
+term.freq <- subset(term.freq, term.freq > 40)
+df2 <- data.frame(term = names(term.freq), freq= term.freq)
+
+(freq.terms <- findFreqTerms(tdm, lowfreq = 65))
+
+term.freq <- rowSums(as.matrix(tdm))
+term.freq <- subset(term.freq, term.freq > 65)
+df3 <- data.frame(term = names(term.freq), freq= term.freq)
+
+```
+
+```{r}
+#Step 11: Plotting the graph of frequent terms
+p1=ggplot(df1, aes(reorder(term, freq),freq)) + theme_bw() + geom_bar(stat = "identity")  + coord_flip() +labs(list(title="@10", x="Terms", y="Term Counts")) + theme(axis.text.y = element_text(size=7))
+
+
+p2=ggplot(df, aes(reorder(term, freq),freq)) + theme_bw() + geom_bar(stat = "identity")  + coord_flip() +labs(list(title="@25", x="Terms", y="Term Counts"))+
+  theme(axis.text.y = element_text(size=7))
+
+
+p3=ggplot(df2, aes(reorder(term, freq),freq)) + theme_bw() + geom_bar(stat = "identity")  + coord_flip() +labs(list(title="@55", x="Terms", y="Term Counts"))
+
+p4=ggplot(df3, aes(reorder(term, freq),freq)) + theme_bw() + geom_bar(stat = "identity")  + coord_flip() +labs(list(title="@85", x="Terms", y="Term Counts")) 
+
+grid.arrange(p1,p2,ncol=2)
+
+```
+
+```{r}
+grid.arrange(p3,p4,ncol=2)
+```
+
+```{r}
+#Step 12: Calculate the frequency of words and sort it by frequency and setting up the Wordcloud
+word.freq <-sort(rowSums(as.matrix(tdm)), decreasing= F)
+pal<- brewer.pal(8, "Dark2")
+wordcloud(words = names(word.freq), freq = word.freq, min.freq = 2, random.order = F, colors = pal, max.words = 150)
+```
+
+```{r}
+#Step 13: Find association with a specific keyword in the tweets - Plastic, Pollution, Planet, Oceans
+list1<- findAssocs(tdm, "plastic", 0.2)
+corrdf1 <- t(data.frame(t(sapply(list1,c))))
+corrdf1
+
+```
+
+```{r}
+barplot(t(as.matrix(corrdf1)), beside=TRUE,xlab = "Words",ylab = "Corr",col = "Cyan",main = "Plastic",border = "black")
+```
+
+```{r}
+list1<- findAssocs(tdm, "pollution", 0.2)
+corrdf1 <- t(data.frame(t(sapply(list1,c))))
+corrdf1
+```
+
+```{r}
+barplot(t(as.matrix(corrdf1)), beside=TRUE,xlab = "Words",ylab = "Corr",col = "blue",main = "Pollution",border = "black")
+```
+
+```{r}
+list1<- findAssocs(tdm, "planet", 0.2)
+corrdf1 <- t(data.frame(t(sapply(list1,c))))
+corrdf1
+```
+
+```{r}
+barplot(t(as.matrix(corrdf1)), beside=TRUE,xlab = "Words",ylab = "Corr",col = "red",main = "Planet",border = "black")
+```
+
+```{r}
+list1<- findAssocs(tdm, "oceans", 0.2)
+corrdf1 <- t(data.frame(t(sapply(list1,c))))
+corrdf1
+```
+
+```{r}
+barplot(t(as.matrix(corrdf1)), beside=TRUE,xlab = "Words",ylab = "Corr",col = "green3",main = "Planet",border = "black")
+```
+
+```{r}
+#Step 14: Topic Modelling to identify latent/hidden topics using LDA technique
+dtm <- as.DocumentTermMatrix(tdm)
+
+rowTotals <- apply(dtm , 1, sum)
+
+NullDocs <- dtm[rowTotals==0, ]
+dtm   <- dtm[rowTotals> 0, ]
+
+if (length(NullDocs$dimnames$Docs) > 0) {
+tweets.df <- tweets.df[-as.numeric(NullDocs$dimnames$Docs),]
+}
+
+lda <- LDA(dtm, k = 5) # find 5 topic
+term <- terms(lda, 7) # first 7 terms of every topic
+(term <- apply(term, MARGIN = 2, paste, collapse = ", "))
+
+```
+
+```{r}
+topics<- topics(lda)
+topics<- data.frame(date=(tweets.df$created), topic = topics)
+qplot (date, ..count.., data=topics, geom ="density", fill= term[topic], position="stack")
+```
+
+```{r}
+#Step 15: Conducting Sentiment Analysis
+mysentiment<-get_nrc_sentiment((tweets.df$text))
+
+# Get the sentiment score for each emotion
+mysentiment.positive =sum(mysentiment$positive)
+mysentiment.anger =sum(mysentiment$anger)
+mysentiment.anticipation =sum(mysentiment$anticipation)
+mysentiment.disgust =sum(mysentiment$disgust)
+mysentiment.fear =sum(mysentiment$fear)
+mysentiment.joy =sum(mysentiment$joy)
+mysentiment.sadness =sum(mysentiment$sadness)
+mysentiment.surprise =sum(mysentiment$surprise)
+mysentiment.trust =sum(mysentiment$trust)
+mysentiment.negative =sum(mysentiment$negative)
+
+# Create the bar chart
+yAxis <- c(mysentiment.positive,
+           + mysentiment.anger,
+           + mysentiment.anticipation,
+           + mysentiment.disgust,
+           + mysentiment.fear,
+           + mysentiment.joy,
+           + mysentiment.sadness,
+           + mysentiment.surprise,
+           + mysentiment.trust,
+           + mysentiment.negative)
+
+xAxis <- c("Positive","Anger","Anticipation","Disgust","Fear","Joy","Sadness",
+           "Surprise","Trust","Negative")
+colors <- c("green","red","blue","orange","red","green","orange","blue","green","red")
+yRange <- range(0,yAxis)
+barplot(yAxis, names.arg = xAxis, 
+        xlab = "Emotional valence", ylab = "Score", main = "Twitter sentiment", 
+        sub = "World Environment Day", col = colors, border = "black", xpd = F, ylim = yRange,
+        axisnames = T, cex.axis = 0.8, cex.sub = 0.8, col.sub = "blue")
+
+```
+
